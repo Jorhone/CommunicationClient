@@ -1,5 +1,5 @@
 #include "CommunicationForTCP.h"
-#include "CommunicationConfig.h"
+#include "CommunicationConfForTCP.h"
 
 #include <QElapsedTimer>
 #include <QCoreApplication>
@@ -9,43 +9,52 @@ CCommunicationForTCP::CCommunicationForTCP(QObject *parent)
 {
     m_SocketPTR = new QTcpSocket(this);
 
-    connect(this, &CCommunicationForTCP::forConnected, this, &CCommunicationForTCP::onConnected);
-    connect(this, &CCommunicationForTCP::forDisconnected, this, &CCommunicationForTCP::onDisconnected);
-    connect(this, &CCommunicationForTCP::forDataSent, this, &CCommunicationForTCP::onDataSent);
-
     connect(m_SocketPTR, &QTcpSocket::readyRead, this, &CCommunicationForTCP::onDataReceived);
-    connect(m_SocketPTR,
-            SIGNAL(error(QAbstractSocket::SocketError)),
-            this,
-            SLOT(onExceptionTriggered(QAbstractSocket::SocketError)));
+    connect(m_SocketPTR, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(onExceptionTriggered(QAbstractSocket::SocketError)));
+
+    //创建线程对象
+    m_DataHandleThreadPTR = new CDataHandleThread;
+
+    //启动线程
+    m_DataHandleThreadPTR->SetThreadFunc(this);
+    m_DataHandleThreadPTR->start();
 }
 
 CCommunicationForTCP::~CCommunicationForTCP()
 {
-    disconnect(this, &CCommunicationForTCP::forConnected, this, &CCommunicationForTCP::onConnected);
-    disconnect(this, &CCommunicationForTCP::forDisconnected, this, &CCommunicationForTCP::onDisconnected);
-    disconnect(this, &CCommunicationForTCP::forDataSent, this, &CCommunicationForTCP::onDataSent);
+    //停止线程
+    if(m_DataHandleThreadPTR->isRunning())
+    {
+        m_DataHandleThreadPTR->requestInterruption(); //请求中止
+        m_AsyncSession.awaken(); //唤醒
+
+        m_DataHandleThreadPTR->quit();
+        m_DataHandleThreadPTR->wait();
+    }
+
+    //销毁线程对象
+    delete m_DataHandleThreadPTR;
+    m_DataHandleThreadPTR = nullptr;
 
     disconnect(m_SocketPTR, &QTcpSocket::readyRead, this, &CCommunicationForTCP::onDataReceived);
-    disconnect(m_SocketPTR,
-            SIGNAL(error(QAbstractSocket::SocketError)),
-            this,
-            SLOT(onExceptionTriggered(QAbstractSocket::SocketError)));
-
+    disconnect(m_SocketPTR, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(onExceptionTriggered(QAbstractSocket::SocketError)));
 
     m_StopFlag = true;
     if(m_SocketPTR->isOpen())
+    {
+        //关闭socket通道
         m_SocketPTR->abort();
+    }
 }
 
-nsCommunicationClient::eCommunicationResult CCommunicationForTCP::Connect(const CAbstractCommunicationConfig &vConfig, quint64 vTimeout)
+nsCommunicationClient::eCommunicationResult CCommunicationForTCP::Connect(const CAbstractCommunicationConf &vConfig, quint64 vTimeout)
 {
     //不可重复连接
     if(IsConnected())
         return nsCommunicationClient::e_Result_ConnectionInUse;
 
     //检查通信配置参数
-    CCommunicationConfigTCP* tCommunicationConfigPTR = dynamic_cast<CCommunicationConfigTCP*>((CAbstractCommunicationConfig*)&vConfig);
+    CCommunicationConfForTCP* tCommunicationConfigPTR = dynamic_cast<CCommunicationConfForTCP*>((CAbstractCommunicationConf*)&vConfig);
     if(tCommunicationConfigPTR == nullptr)
         return nsCommunicationClient::e_Result_ConfigError;
 
@@ -55,29 +64,29 @@ nsCommunicationClient::eCommunicationResult CCommunicationForTCP::Connect(const 
     if(!tCommunicationConfigPTR->CheckDataAvailable())
         return nsCommunicationClient::e_Result_ConfigError;
 
+    m_StopFlag = false;
+
     //连接对端
-    emit forConnected(tCommunicationConfigPTR->m_PeerAddress, tCommunicationConfigPTR->m_PeerPort);
+    m_SocketPTR->connectToHost(tCommunicationConfigPTR->m_PeerAddress, tCommunicationConfigPTR->m_PeerPort);
 
     //等待连接完成
     bool tIsTimeout = true;
     QElapsedTimer tElapsedTimer;
     tElapsedTimer.start();
 
-    m_StopFlag = false;
-
     do
     {
-        if(m_SocketPTR->state() == QAbstractSocket::ConnectedState)
-        {
-            tIsTimeout = false;
-            break;
-        }
-
         if(m_StopFlag)
             break;
 
         if(vTimeout <= 0)
             break;
+
+        if(m_SocketPTR->state() == QAbstractSocket::ConnectedState)
+        {
+            tIsTimeout = false;
+            break;
+        }
 
         QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
 
@@ -102,11 +111,10 @@ nsCommunicationClient::eCommunicationResult CCommunicationForTCP::Disconnect(qui
     if(!IsConnected())
         return nsCommunicationClient::e_Result_Success;
 
-    m_CommunicationMedium = nsCommunicationClient::e_Medium_Unknown;
     m_StopFlag = true;
 
     //断开连接
-    emit forDisconnected();
+    m_SocketPTR->disconnectFromHost();
 
     //等待连接断开
     bool tIsTimeout = true;
@@ -115,14 +123,14 @@ nsCommunicationClient::eCommunicationResult CCommunicationForTCP::Disconnect(qui
 
     do
     {
+        if(vTimeout <= 0)
+            break;
+
         if(m_SocketPTR->state() == QAbstractSocket::UnconnectedState)
         {
             tIsTimeout = false;
             break;
         }
-
-        if(vTimeout <= 0)
-            break;
 
         QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
 
@@ -130,8 +138,11 @@ nsCommunicationClient::eCommunicationResult CCommunicationForTCP::Disconnect(qui
 
     //超时了，强杀
     if(tIsTimeout)
+    {
         m_SocketPTR->abort();
+    }
 
+    m_CommunicationMedium = nsCommunicationClient::e_Medium_Unknown;
     return nsCommunicationClient::e_Result_Success;
 }
 
@@ -141,45 +152,47 @@ nsCommunicationClient::eCommunicationResult CCommunicationForTCP::SendData(const
     if(!IsConnected() || !m_SocketPTR->isWritable())
         return nsCommunicationClient::e_Result_WriteInhibit;
 
-    m_IsSendFinish = false;
-    m_SendDataLen = 0;
+    //发送数据
+    qint64 tSendDataLen = m_SocketPTR->write(vDataArray);
+    
+    //检查发送是否成功启动
+    if(tSendDataLen < 0)
+        return nsCommunicationClient::e_Result_SendException;
 
-    emit forDataSent(vDataArray);
+    //检查发送是否完整
+    if(tSendDataLen < vDataArray.size())
+        return nsCommunicationClient::e_Result_WriteBufferFull;
 
-    //等待发送完成
+    //等待所有数据发送完成，带超时检测和快速跳出机制
     bool tIsTimeout = true;
     QElapsedTimer tElapsedTimer;
     tElapsedTimer.start();
 
     do
     {
-        if(m_IsSendFinish)
+        //检查停止标志，快速跳出
+        if(m_StopFlag)
+            break;
+
+        //检查是否超时
+        if(vTimeout <= 0)
+            break;
+
+        //检查发送缓冲区是否为空（数据已全部发送）
+        if(m_SocketPTR->bytesToWrite() == 0)
         {
             tIsTimeout = false;
             break;
         }
 
-        if(m_StopFlag)
-            break;
-
-        if(vTimeout <= 0)
-            break;
-
+        //处理事件，避免界面卡死
         QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
 
     }while((quint64)tElapsedTimer.elapsed() < vTimeout);
 
-    //超时了
+    // 超时或被停止
     if(tIsTimeout)
         return nsCommunicationClient::e_Result_SendException;
-
-    //发送异常
-    if(m_SendDataLen < 0)
-        return nsCommunicationClient::e_Result_SendException;
-
-    //发送不完整
-    if(m_SendDataLen < vDataArray.size())
-        return nsCommunicationClient::e_Result_WriteBufferFull;
 
     return nsCommunicationClient::e_Result_Success;
 }
@@ -200,30 +213,30 @@ bool CCommunicationForTCP::IsConnected()
     return false;
 }
 
-void CCommunicationForTCP::onConnected(const QString &vPeerAddress, quint32 vPeerPort)
+void CCommunicationForTCP::ThreadFunction(const CDataHandleThread *vThreadPTR, const QVariant &vFuncData)
 {
-    //连接对端
-    m_SocketPTR->connectToHost(vPeerAddress, vPeerPort);
-}
+    Q_UNUSED(vFuncData)
 
-void CCommunicationForTCP::onDisconnected()
-{
-    //断开连接
-    m_SocketPTR->disconnectFromHost();
-}
+    do
+    {
+        //休眠
+        m_AsyncSession.wait();
 
-void CCommunicationForTCP::onDataSent(const QByteArray &vDataArray)
-{
-    //发送数据
-    m_SendDataLen = m_SocketPTR->write(vDataArray);
-    m_IsSendFinish = true;
+        //线程请求中止，退出循环
+        if(vThreadPTR->isInterruptionRequested())
+            break;
+
+        //接收数据
+        QByteArray tDataArray = m_SocketPTR->readAll();
+        emit forDataReceived(tDataArray, tDataArray.length());
+
+    }while(1);
 }
 
 void CCommunicationForTCP::onDataReceived()
 {
-    //接收数据
-    QByteArray tDataArray = m_SocketPTR->readAll();
-    emit forDataReceived(tDataArray, tDataArray.length());
+    //唤醒
+    m_AsyncSession.awaken();
 }
 
 void CCommunicationForTCP::onExceptionTriggered(QAbstractSocket::SocketError vErrorCode)

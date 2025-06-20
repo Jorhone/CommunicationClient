@@ -1,6 +1,8 @@
+
 INCLUDEPATH += $$PWD
 
 HEADERS += \
+    $$PWD/AbstractCommunication.h \
     $$PWD/CommunicationForTCP.h
 
 SOURCES += \

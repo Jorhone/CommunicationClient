@@ -1,7 +1,7 @@
 #include "CommunicationClient.h"
 #include "CommunicationClientDefine.h"
 
-#include "AbstractCommunicationConfig.h"
+#include "AbstractCommunicationConf.h"
 #include "CommunicationForTCP.h"
 
 CCommunicationClient::CCommunicationClient(QObject *parent)
@@ -15,7 +15,7 @@ CCommunicationClient::~CCommunicationClient()
     DestoryCommunication();
 }
 
-bool CCommunicationClient::Connect(const CAbstractCommunicationConfig &vConfig, quint64 vTimeout)
+bool CCommunicationClient::Connect(const CAbstractCommunicationConf &vConfig, quint64 vTimeout)
 {
     bool tHasException = true;
 
@@ -95,9 +95,9 @@ QString CCommunicationClient::GetLastErrorDescribe()
     return m_LastErrorDescribe;
 }
 
-bool CCommunicationClient::CreateCommunication(const CAbstractCommunicationConfig &vConfig)
+bool CCommunicationClient::CreateCommunication(const CAbstractCommunicationConf &vConfig)
 {
-    CAbstractCommunicationConfig* tConfigPTR = const_cast<CAbstractCommunicationConfig*>(&vConfig);
+    CAbstractCommunicationConf* tConfigPTR = const_cast<CAbstractCommunicationConf*>(&vConfig);
 
     //如果已经实例化，直接返回
     if(m_CommunicationPTR != nullptr)
@@ -136,11 +136,6 @@ bool CCommunicationClient::CreateCommunication(const CAbstractCommunicationConfi
     connect(tObjectPTR, SIGNAL(forDataReceived(QByteArray, quint64)), this, SIGNAL(forDataReceived(QByteArray, quint64)), Qt::DirectConnection);
     connect(tObjectPTR, SIGNAL(forExceptionTriggered(CCommunicationException)), this, SIGNAL(forExceptionTriggered(CCommunicationException)), Qt::DirectConnection);
 
-    //移入子线程
-    m_WorkThreadPTR = new QThread(this);
-    tObjectPTR->moveToThread(m_WorkThreadPTR);
-    m_WorkThreadPTR->start();
-
     return true;
 }
 
@@ -148,16 +143,6 @@ void CCommunicationClient::DestoryCommunication()
 {
     if(m_CommunicationPTR == nullptr)
         return ;
-
-    if(m_WorkThreadPTR != nullptr)
-    {
-        m_WorkThreadPTR->requestInterruption();
-        m_WorkThreadPTR->quit();
-        m_WorkThreadPTR->wait();
-
-        delete m_WorkThreadPTR;
-        m_WorkThreadPTR = nullptr;
-    }
 
     delete m_CommunicationPTR;
     m_CommunicationPTR = nullptr;

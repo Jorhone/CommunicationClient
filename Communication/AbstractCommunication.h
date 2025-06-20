@@ -6,7 +6,7 @@
 
 #include <QString>
 
-class CAbstractCommunicationConfig;
+class CAbstractCommunicationConf;
 
 class CAbstractCommunication
 {
@@ -19,7 +19,7 @@ public:
      * @param vTimeout      [in]连接超时，单位：ms
      * @return
      */
-    virtual nsCommunicationClient::eCommunicationResult Connect(const CAbstractCommunicationConfig& vConfig, quint64 vTimeout) = 0;
+    virtual nsCommunicationClient::eCommunicationResult Connect(const CAbstractCommunicationConf& vConfig, quint64 vTimeout) = 0;
 
     /**
      * @brief Disconnect    断开连接
@@ -67,6 +67,8 @@ public:
     //槽
     //-------------------------------------------------------------------------
 
+protected:
+    nsCommunicationClient::eCommunicationMedium m_CommunicationMedium = nsCommunicationClient::e_Medium_Unknown;
 };
 
 #endif // CABSTRACTCOMMUNICATION_H
