@@ -2,7 +2,6 @@
 #define CCOMMUNICATIONEXCEPTION_H
 
 #include "CommunicationClientExport.h"
-
 #include <QString>
 
 class COMMUNICATIONCLIENT_EXPORT CCommunicationException

@@ -1,5 +1,4 @@
 #include "CommunicationException.h"
-
 #include <QObject>
 
 CCommunicationException::CCommunicationException()
@@ -8,9 +7,9 @@ CCommunicationException::CCommunicationException()
 }
 
 CCommunicationException::CCommunicationException(int vExceptionCode, QString vExceptionDescribe, bool vIsHealthy)
-    : m_ExceptionCode(vExceptionCode), m_ExceptionDescribe(vExceptionDescribe), m_IsContinueToOperate(vIsHealthy)
 {
     qRegisterMetaType<CCommunicationException>("CCommunicationException");
+    SetException(vExceptionCode, vExceptionDescribe, vIsHealthy);
 }
 
 void CCommunicationException::SetException(int vExceptionCode, QString vExceptionDescribe, bool vIsHealthy)

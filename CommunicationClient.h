@@ -8,7 +8,7 @@
 #include <QThread>
 
 class CAbstractCommunication;
-class CAbstractCommunicationConfig;
+class CAbstractCommunicationConf;
 
 class COMMUNICATIONCLIENT_EXPORT CCommunicationClient : public QObject
 {
@@ -23,7 +23,7 @@ public:
      * @param vTimeout      [in]连接超时，单位：ms
      * @return
      */
-    bool Connect(const CAbstractCommunicationConfig& vConfig, quint64 vTimeout = 5000);
+    bool Connect(const CAbstractCommunicationConf& vConfig, quint64 vTimeout = 5000);
 
     /**
      * @brief Disconnect    断开连接
@@ -67,12 +67,11 @@ signals:
     void forExceptionTriggered(CCommunicationException vException);
 
 private:
-    bool CreateCommunication(const CAbstractCommunicationConfig& vConfig);
+    bool CreateCommunication(const CAbstractCommunicationConf& vConfig);
     void DestoryCommunication(void);
 
 private:
     CAbstractCommunication* m_CommunicationPTR = nullptr;
-    QThread* m_WorkThreadPTR = nullptr;
     QString m_LastErrorDescribe = "";
 };
 

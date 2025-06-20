@@ -2,11 +2,13 @@
 #define CCOMMUNICATIONFORTCP_H
 
 #include "AbstractCommunication.h"
+#include "DataHandleThread.h"
+#include "AsyncSession.hpp"
 
 #include <QObject>
 #include <QTcpSocket>
 
-class CCommunicationForTCP : public QObject, public CAbstractCommunication
+class CCommunicationForTCP : public QObject, public CAbstractCommunication, public CAbstractThreadFunc
 {
     Q_OBJECT
 public:
@@ -19,7 +21,7 @@ public:
      * @param vTimeout      [in]连接超时，单位：ms
      * @return
      */
-    virtual nsCommunicationClient::eCommunicationResult Connect(const CAbstractCommunicationConfig& vConfig, quint64 vTimeout);
+    virtual nsCommunicationClient::eCommunicationResult Connect(const CAbstractCommunicationConf& vConfig, quint64 vTimeout);
 
     /**
      * @brief Disconnect    断开连接
@@ -48,6 +50,9 @@ public:
      */
     virtual bool IsConnected(void);
 
+protected:
+    virtual void ThreadFunction(const CDataHandleThread* vThreadPTR, const QVariant& vFuncData);
+
 signals:
     /**
      * @brief forDataReceived       数据接收信号
@@ -62,26 +67,16 @@ signals:
      */
     virtual void forExceptionTriggered(CCommunicationException vException);
 
-signals:
-    void forConnected(const QString& vPeerAddress, quint32 vPeerPort);
-    void forDisconnected(void);
-    void forDataSent(const QByteArray& vDataArray);
-
 private slots:
-    void onConnected(const QString& vPeerAddress, quint32 vPeerPort);
-    void onDisconnected(void);
-    void onDataSent(const QByteArray& vDataArray);
     void onDataReceived(void);
     void onExceptionTriggered(QAbstractSocket::SocketError vErrorCode);
 
 private:
-    nsCommunicationClient::eCommunicationMedium m_CommunicationMedium = nsCommunicationClient::e_Medium_Unknown;
+    volatile bool m_StopFlag  = true;
 
     QTcpSocket* m_SocketPTR = nullptr;
-    bool        m_StopFlag  = true;
-
-    bool        m_IsSendFinish  = false;
-    qint64      m_SendDataLen   = 0;
+    CDataHandleThread* m_DataHandleThreadPTR = nullptr;
+    AsyncSession<int> m_AsyncSession;
 };
 
 #endif // CCOMMUNICATIONFORTCP_H
