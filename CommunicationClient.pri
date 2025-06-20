@@ -1,4 +1,4 @@
-QT += widgets network
+QT += widgets network serialport
 
 TEMPLATE = lib
 DEFINES += COMMUNICATIONCLIENT_LIBRARY
