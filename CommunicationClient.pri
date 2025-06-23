@@ -42,8 +42,20 @@ HEADERS += \
 DESTDIR = $$USERDATA_INSTALL_DIR
 
 win32: {
+    !isEmpty(USERDATA_INSTALL_DIR): {
+        target.path = $$USERDATA_INSTALL_DIR
+        target.files += $$USERDATA_PROJECT_ROOT/*.h
+        target.files += $$USERDATA_PROJECT_ROOT/CommunicationConf/*.h
+    }
 }
 
 unix: {
     QMAKE_RPATHDIR += ./
+    !isEmpty(USERDATA_INSTALL_DIR): {
+        target.path = $$USERDATA_INSTALL_DIR
+        target.files += $$USERDATA_PROJECT_ROOT/*.h
+        target.files += $$USERDATA_PROJECT_ROOT/CommunicationConf/*.h
+    }
 }
+
+!isEmpty(target.path): INSTALLS += target
