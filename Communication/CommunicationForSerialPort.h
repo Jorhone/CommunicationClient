@@ -33,8 +33,6 @@ private slots:
     void onExceptionTriggered(QSerialPort::SerialPortError vErrorCode);
 
 private:
-    volatile bool m_StopFlag  = true;
-
     QSerialPort* m_SerialPortPTR = nullptr;
     CDataHandleThread* m_DataHandleThreadPTR = nullptr;
     AsyncSession<int> m_AsyncSession;

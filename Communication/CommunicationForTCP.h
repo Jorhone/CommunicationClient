@@ -72,8 +72,6 @@ private slots:
     void onExceptionTriggered(QAbstractSocket::SocketError vErrorCode);
 
 private:
-    volatile bool m_StopFlag  = true;
-
     QTcpSocket* m_SocketPTR = nullptr;
     CDataHandleThread* m_DataHandleThreadPTR = nullptr;
     AsyncSession<int> m_AsyncSession;
