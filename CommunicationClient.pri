@@ -1,4 +1,4 @@
-QT += widgets network
+QT += core network serialport
 
 TEMPLATE = lib
 DEFINES += COMMUNICATIONCLIENT_LIBRARY
@@ -7,6 +7,7 @@ DEFINES += COMMUNICATIONCLIENT_LIBRARY
 #DEFINES += LIBRARY_UNEXPORT
 contains(DEFINES, LIBRARY_UNEXPORT) {
     TEMPLATE = app
+    include($$PWD/TestDemoCode/TestDemoCode.pri)
 }
 
 CONFIG += c++11

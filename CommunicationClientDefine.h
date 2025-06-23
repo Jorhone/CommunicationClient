@@ -21,6 +21,8 @@ typedef enum
     e_Result_WriteBufferFull,   //写通道已满
     e_Result_ReadBufferFull,    //读通道已满
 
+    e_Result_SerialPortCannotBeOpened,  //串口无法打开
+
 }eCommunicationResult;
 
 typedef enum
@@ -53,6 +55,7 @@ public:
             {e_Result_SendException,    "发送异常"},
             {e_Result_WriteBufferFull,  "写通道已满"},
             {e_Result_ReadBufferFull,   "读通道已满"},
+            {e_Result_SerialPortCannotBeOpened, "串口无法打开"},
         };
 
         return tCommunicationResultHash.value(vCommunicationResult);

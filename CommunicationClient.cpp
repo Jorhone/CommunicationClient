@@ -3,6 +3,7 @@
 
 #include "AbstractCommunicationConf.h"
 #include "CommunicationForTCP.h"
+#include "CommunicationForSerialPort.h"
 
 CCommunicationClient::CCommunicationClient(QObject *parent)
     : QObject(parent)
@@ -115,6 +116,10 @@ bool CCommunicationClient::CreateCommunication(const CAbstractCommunicationConf 
     {
     case nsCommunicationClient::e_Medium_TCP: {
         m_CommunicationPTR = new CCommunicationForTCP();
+        break;
+    }
+    case nsCommunicationClient::e_Medium_SerialPort: {
+        m_CommunicationPTR = new CCommunicationForSerialPort();
         break;
     }
     default:

@@ -14,7 +14,6 @@ CCommunicationForTCP::CCommunicationForTCP(QObject *parent)
 
     //创建线程对象
     m_DataHandleThreadPTR = new CDataHandleThread;
-
     //启动线程
     m_DataHandleThreadPTR->SetThreadFunc(this);
     m_DataHandleThreadPTR->start();
@@ -22,28 +21,33 @@ CCommunicationForTCP::CCommunicationForTCP(QObject *parent)
 
 CCommunicationForTCP::~CCommunicationForTCP()
 {
-    //停止线程
-    if(m_DataHandleThreadPTR->isRunning())
-    {
-        m_DataHandleThreadPTR->requestInterruption(); //请求中止
-        m_AsyncSession.awaken(); //唤醒
-
-        m_DataHandleThreadPTR->quit();
-        m_DataHandleThreadPTR->wait();
-    }
-
     //销毁线程对象
-    delete m_DataHandleThreadPTR;
-    m_DataHandleThreadPTR = nullptr;
+    if(m_DataHandleThreadPTR != nullptr)
+    {
+        //停止线程
+        if(m_DataHandleThreadPTR->isRunning())
+        {
+            m_DataHandleThreadPTR->requestInterruption(); //请求中止
+            m_AsyncSession.awaken(); //唤醒
+
+            m_DataHandleThreadPTR->quit();
+            m_DataHandleThreadPTR->wait();
+        }
+
+        delete m_DataHandleThreadPTR;
+        m_DataHandleThreadPTR = nullptr;
+    }
 
     disconnect(m_SocketPTR, &QTcpSocket::readyRead, this, &CCommunicationForTCP::onDataReceived);
     disconnect(m_SocketPTR, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(onExceptionTriggered(QAbstractSocket::SocketError)));
 
-    m_StopFlag = true;
-    if(m_SocketPTR->isOpen())
+    if(m_SocketPTR != nullptr)
     {
-        //关闭socket通道
-        m_SocketPTR->abort();
+        if(m_SocketPTR->isOpen())
+        {
+            //关闭socket通道
+            m_SocketPTR->abort();
+        }
     }
 }
 
@@ -64,8 +68,6 @@ nsCommunicationClient::eCommunicationResult CCommunicationForTCP::Connect(const 
     if(!tCommunicationConfigPTR->CheckDataAvailable())
         return nsCommunicationClient::e_Result_ConfigError;
 
-    m_StopFlag = false;
-
     //连接对端
     m_SocketPTR->connectToHost(tCommunicationConfigPTR->m_PeerAddress, tCommunicationConfigPTR->m_PeerPort);
 
@@ -76,9 +78,6 @@ nsCommunicationClient::eCommunicationResult CCommunicationForTCP::Connect(const 
 
     do
     {
-        if(m_StopFlag)
-            break;
-
         if(vTimeout <= 0)
             break;
 
@@ -95,7 +94,6 @@ nsCommunicationClient::eCommunicationResult CCommunicationForTCP::Connect(const 
     //超时了
     if(tIsTimeout)
     {
-        m_StopFlag = true;
         m_SocketPTR->abort();
         return nsCommunicationClient::e_Result_ConnectTimeout;
     }
@@ -110,8 +108,6 @@ nsCommunicationClient::eCommunicationResult CCommunicationForTCP::Disconnect(qui
     //未连接，直接返回
     if(!IsConnected())
         return nsCommunicationClient::e_Result_Success;
-
-    m_StopFlag = true;
 
     //断开连接
     m_SocketPTR->disconnectFromHost();
@@ -170,10 +166,6 @@ nsCommunicationClient::eCommunicationResult CCommunicationForTCP::SendData(const
 
     do
     {
-        //检查停止标志，快速跳出
-        if(m_StopFlag)
-            break;
-
         //检查是否超时
         if(vTimeout <= 0)
             break;
