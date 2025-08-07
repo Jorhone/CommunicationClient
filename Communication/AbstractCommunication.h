@@ -5,6 +5,7 @@
 #include "CommunicationException.h"
 
 #include <QString>
+#include <QMutex>
 
 class CAbstractCommunicationConf;
 
@@ -12,6 +13,9 @@ class CAbstractCommunication
 {
 public:
     virtual ~CAbstractCommunication(){};
+
+    //纯虚函数
+    //-------------------------------------------------------------------------
 
     /**
      * @brief Connect       建立连接
@@ -37,26 +41,44 @@ public:
     virtual nsCommunicationClient::eCommunicationResult SendData(const QByteArray& vDataArray, quint64 vTimeout) = 0;
 
     /**
-     * @brief GetCommunicationMedium    获取通信媒介/通信类型
-     * @return
-     */
-    virtual nsCommunicationClient::eCommunicationMedium GetCommunicationMedium(void) = 0;
-
-    /**
      * @brief IsConnected   是否已连接
      * @return
      */
     virtual bool IsConnected(void) = 0;
+
+    //虚函数
+    //-------------------------------------------------------------------------
+
+    /**
+     * @brief GetCommunicationMedium 获取通信媒介/通信类型
+     * @return
+     */
+    virtual nsCommunicationClient::eCommunicationMedium GetCommunicationMedium(void)
+    {
+        return m_CommunicationMedium;
+    }
+
+    /**
+     * @brief GetALLReceivedData 获取所有接收到的数据
+     * @return
+     */
+    virtual QByteArray GetALLReceivedData(void)
+    {
+        QMutexLocker x(&m_DataMutex);
+
+        QByteArray tALLReceivedData = m_ReceiveBuffer;
+        m_ReceiveBuffer.clear();
+
+        return tALLReceivedData;
+    }
 
     //信号
     //-------------------------------------------------------------------------
 
     /**
      * @brief forDataReceived       数据接收信号
-     * @param vDataArray            [out]接收到的数据内容，统一使用uft8
-     * @param vDataLength           [out]接收到的数据长度
      */
-    virtual void forDataReceived(QByteArray vDataArray, quint64 vDataLength) = 0;
+    virtual void forDataReceived(void) = 0;
 
     /**
      * @brief forExceptionTriggered 异常触发信号
@@ -69,6 +91,8 @@ public:
 
 protected:
     nsCommunicationClient::eCommunicationMedium m_CommunicationMedium = nsCommunicationClient::e_Medium_Unknown;
+    QByteArray m_ReceiveBuffer = "";
+    QMutex m_DataMutex;
 };
 
 #endif // CABSTRACTCOMMUNICATION_H

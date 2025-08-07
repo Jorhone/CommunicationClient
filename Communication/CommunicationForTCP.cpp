@@ -189,11 +189,6 @@ nsCommunicationClient::eCommunicationResult CCommunicationForTCP::SendData(const
     return nsCommunicationClient::e_Result_Success;
 }
 
-nsCommunicationClient::eCommunicationMedium CCommunicationForTCP::GetCommunicationMedium()
-{
-    return m_CommunicationMedium;
-}
-
 bool CCommunicationForTCP::IsConnected()
 {
     if(m_SocketPTR == nullptr)
@@ -219,8 +214,8 @@ void CCommunicationForTCP::ThreadFunction(const CDataHandleThread *vThreadPTR, c
             break;
 
         //接收数据
-        QByteArray tDataArray = m_SocketPTR->readAll();
-        emit forDataReceived(tDataArray, tDataArray.length());
+        ReceiveALLData();
+        emit forDataReceived();
 
     }while(1);
 }
@@ -249,4 +244,11 @@ void CCommunicationForTCP::onExceptionTriggered(QAbstractSocket::SocketError vEr
     QString tErrorSTR = m_SocketPTR->errorString();
     CCommunicationException tCommunicationException(vErrorCode, tErrorSTR, !tIsCritical);
     emit forExceptionTriggered(tCommunicationException);
+}
+
+void CCommunicationForTCP::ReceiveALLData()
+{
+    QMutexLocker x(&m_DataMutex);
+    QByteArray tDataArray = m_SocketPTR->readAll();
+    m_ReceiveBuffer.push_back(tDataArray);
 }

@@ -47,6 +47,12 @@ public:
     bool IsConnected(void);
 
     /**
+     * @brief GetALLReceivedData 获取所有接收到的数据
+     * @return
+     */
+    QByteArray GetALLReceivedData(void);
+
+    /**
      * @brief GetLastErrorDescribe  获取最新错误描述
      * @return
      */
@@ -55,10 +61,8 @@ public:
 signals:
     /**
      * @brief forDataReceived       数据接收信号
-     * @param vDataArray            [out]接收到的数据内容，统一使用uft8
-     * @param vDataLength           [out]接收到的数据长度
      */
-    void forDataReceived(QByteArray vDataArray, quint64 vDataLength);
+    void forDataReceived(void);
 
     /**
      * @brief forExceptionTriggered 异常触发信号

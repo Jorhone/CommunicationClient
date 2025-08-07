@@ -91,6 +91,14 @@ bool CCommunicationClient::IsConnected()
     return m_CommunicationPTR->IsConnected();
 }
 
+QByteArray CCommunicationClient::GetALLReceivedData()
+{
+    if(m_CommunicationPTR == nullptr)
+        return QByteArray();
+
+    return m_CommunicationPTR->GetALLReceivedData();
+}
+
 QString CCommunicationClient::GetLastErrorDescribe()
 {
     return m_LastErrorDescribe;
@@ -138,8 +146,8 @@ bool CCommunicationClient::CreateCommunication(const CAbstractCommunicationConf 
     }
 
     //信号连接
-    connect(tObjectPTR, SIGNAL(forDataReceived(QByteArray, quint64)), this, SIGNAL(forDataReceived(QByteArray, quint64)), Qt::DirectConnection);
-    connect(tObjectPTR, SIGNAL(forExceptionTriggered(CCommunicationException)), this, SIGNAL(forExceptionTriggered(CCommunicationException)), Qt::DirectConnection);
+    connect(tObjectPTR, SIGNAL(forDataReceived()), this, SIGNAL(forDataReceived()), Qt::QueuedConnection);
+    connect(tObjectPTR, SIGNAL(forExceptionTriggered(CCommunicationException)), this, SIGNAL(forExceptionTriggered(CCommunicationException)));
 
     return true;
 }
@@ -148,6 +156,13 @@ void CCommunicationClient::DestoryCommunication()
 {
     if(m_CommunicationPTR == nullptr)
         return ;
+
+    QObject* tObjectPTR = dynamic_cast<QObject*>(m_CommunicationPTR);
+    if(tObjectPTR != nullptr)
+    {
+        disconnect(tObjectPTR, SIGNAL(forDataReceived()), this, SIGNAL(forDataReceived()));
+        disconnect(tObjectPTR, SIGNAL(forExceptionTriggered(CCommunicationException)), this, SIGNAL(forExceptionTriggered(CCommunicationException)));
+    }
 
     delete m_CommunicationPTR;
     m_CommunicationPTR = nullptr;

@@ -84,7 +84,7 @@ nsCommunicationClient::eCommunicationResult CCommunicationForSerialPort::Connect
         return nsCommunicationClient::e_Result_SerialPortCannotBeOpened;
     }
 
-    m_CommunicationMedium = nsCommunicationClient::e_Medium_SerialPort;
+    m_CommunicationMedium = tCommunicationConfigPTR->GetCommunicationMedium();
     return nsCommunicationClient::e_Result_Success;
 }
 
@@ -145,11 +145,6 @@ nsCommunicationClient::eCommunicationResult CCommunicationForSerialPort::SendDat
     return nsCommunicationClient::e_Result_Success;
 }
 
-nsCommunicationClient::eCommunicationMedium CCommunicationForSerialPort::GetCommunicationMedium()
-{
-    return m_CommunicationMedium;
-}
-
 bool CCommunicationForSerialPort::IsConnected()
 {
     if(m_SerialPortPTR == nullptr)
@@ -172,8 +167,8 @@ void CCommunicationForSerialPort::ThreadFunction(const CDataHandleThread *vThrea
         if(vThreadPTR->isInterruptionRequested())
             break;
 
-        QByteArray tDataArray = m_SerialPortPTR->readAll();
-        emit forDataReceived(tDataArray, tDataArray.length());
+        ReceiveALLData();
+        emit forDataReceived();
 
     }while(1);
 }
@@ -204,4 +199,11 @@ void CCommunicationForSerialPort::onExceptionTriggered(QSerialPort::SerialPortEr
     QString tErrorSTR = m_SerialPortPTR->errorString();
     CCommunicationException tCommunicationException(vErrorCode, tErrorSTR, !tIsCritical);
     emit forExceptionTriggered(tCommunicationException);
+}
+
+void CCommunicationForSerialPort::ReceiveALLData()
+{
+    QMutexLocker x(&m_DataMutex);
+    QByteArray tDataArray = m_SerialPortPTR->readAll();
+    m_ReceiveBuffer.push_back(tDataArray);
 }

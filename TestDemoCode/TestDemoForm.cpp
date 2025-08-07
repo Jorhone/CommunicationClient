@@ -28,11 +28,13 @@ CTestDemoForm::~CTestDemoForm()
     delete ui;
 }
 
-void CTestDemoForm::onDataReceived(QByteArray vDataArray, quint64 vDataLength)
+void CTestDemoForm::onDataReceived(void)
 {
-    Q_UNUSED(vDataLength)
+    QByteArray tDataArray = m_Client.GetALLReceivedData();
+    if(tDataArray.isEmpty())
+        return;
 
-    QString tDataReceived = vDataArray.toHex(' ');
+    QString tDataReceived = tDataArray.toHex(' ');
     QString tPrintInfo = QString("%1 [recv]：%2").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz"), tDataReceived);
     ui->plainTextEdit_Data->appendPlainText(tPrintInfo);
 }

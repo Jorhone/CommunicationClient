@@ -17,7 +17,7 @@ public:
     ~CTestDemoForm();
 
 private slots:
-    void onDataReceived(QByteArray vDataArray, quint64 vDataLength);
+    void onDataReceived(void);
     void onExceptionTriggered(CCommunicationException vException);
 
 private slots:
